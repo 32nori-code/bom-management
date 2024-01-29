@@ -1,0 +1,1416 @@
+{% extends "bom/base.html" %}
+{% load django_bootstrap5 %}
+{% load bom.custom_tags %}
+{% load static %}
+{% block extra_css %}
+<style>
+  #part-list,
+  #part-list li {
+    margin: 0;
+    padding: 2px 0;
+    border: none;
+    list-style: none;
+  }
+
+  #part-list ul {
+    list-style: none;
+    /* "\25B6" 三角の配置の際設定した値の分右側へ移動させる */
+    margin-left: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-right: 6px;
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: 0.7rem;
+    padding-right: 0;
+  }
+
+  .part-up {
+    cursor: pointer;
+    user-select: none;
+    display: block;
+    /* transition: color 0.3s ease-in-out;  */
+    /* テキスト色をアニメーション化 */
+  }
+
+  .part-up:hover {
+    background: #eee;
+  }
+
+  .part-block {
+    cursor: pointer;
+    user-select: none;
+    display: block;
+  }
+
+
+  .part-block:hover {
+    background: #eee;
+  }
+
+  .icon-size {
+    width: 24px;
+    height: 24px;
+  }
+
+  .custom-margin-left {
+    margin-left: 16px;
+    /* 必要に応じてこの値を調整 */
+  }
+
+  #undo-icon {
+    /* 半透明 */
+    opacity: 0.25;
+  }
+
+  #undo-icon.active {
+    cursor: pointer;
+    /* 不透明 */
+    opacity: 1;
+  }
+
+  #redo-icon {
+    /* 半透明 */
+    opacity: 0.25;
+  }
+
+  #redo-icon.active {
+    cursor: pointer;
+    /* 不透明 */
+    opacity: 1;
+  }
+
+  /* .icon-button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.icon-button:focus {
+    outline: none;
+} */
+
+  .more-or-less {
+    /* content: "\25B6"; */
+    color: black;
+    /* color: #000; */
+    /* 標準の黒色 */
+    display: inline-block;
+    margin-right: 6px;
+    /* opacity: 0.25; */
+    font-size: 0.7rem;
+    vertical-align: middle;
+  }
+
+  .more-or-less-dummy {
+    content: "";
+    display: inline-block;
+    margin-right: 30px;
+    font-size: 0.7rem;
+  }
+
+  .part-up.part-down {
+    /* 少し太字 */
+    font-weight: 600;
+    /* color: #333; */
+    /* 濃い黒色 */
+  }
+
+  .nested {
+    display: none;
+  }
+
+  .active {
+    display: block;
+  }
+
+  .error {
+    color: red;
+  }
+
+  .success {
+    color: green;
+  }
+
+  /* メニューのスタイル */
+  .context-menu {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+    padding: 5px 0;
+    z-index: 9999;
+  }
+
+  .context-menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .context-menu-item:hover {
+    background-color: #f0f0f0;
+  }
+</style>
+{% endblock %}
+
+{% block title %}
+{{title}}
+{% endblock title %}
+
+{% block content %}
+<h4 class="mt-4 mb-5 border-bottom">{{title}}</h4>
+<div id="message-container"></div>
+<form id="editForm"
+  action="{% if product_id %}{% url 'bom:parts_structure_mod' product_id=product_id %}{% else %}{% url 'bom:parts_structure_add' %}{% endif %}"
+  method="post">
+  {% csrf_token %}
+  <div class="row">
+    <label class="col" for="name">リスト(コード_名前:構成数,実使用数)</label>
+  </div>
+  <div class="d-flex">
+    <img id="undo-icon" class="icon-size" src="{% static 'icons/undo_black_24dp.svg' %}" alt="元に戻す" title="元に戻す">
+
+    <img id="redo-icon" class="icon-size custom-margin-left" src="{% static 'icons/redo_black_24dp.svg' %}" alt="やり直し"
+      title="やり直し">
+  </div>
+  <div id="row-part-list" class="row">
+    {% if nodes %}
+    <ul id="part-list">
+
+
+      {% if nodes.0.children %}
+      <li id="{{nodes.0.id}}">
+        <span class="part-up">
+          <span class="more-or-less"><img class="expand_more"
+              src="{% static 'icons/expand_more_black_24dp.svg' %}" alt="もっと見る" title="もっと見る"></span><span
+            class="code">{{nodes.0.code}}</span>
+          _{{ nodes.0.name }}:<span class="quantity">{{ nodes.0.quantity }}</span>
+          ,<span class="usedquantity">{{ nodes.0.usedquantity }}</span>
+        </span>
+        {% recursetree nodes.0.children %}
+      </li>
+      {% else %}
+      <li id="{{nodes.0.id}}">
+        <span class="part-block">
+          <span class="more-or-less-dummy"></span><span class="code">{{nodes.0.code}}</span>
+          _{{ nodes.0.name }}:<span class="quantity">{{ nodes.0.quantity }}</span>
+          ,<span class="usedquantity">{{ nodes.0.usedquantity }}</span>
+        </span>
+      </li>
+      {% endif %}
+
+
+
+    </ul>
+
+
+    {% endif %}
+  </div>
+
+  <div id="context-menu" class="context-menu" style="display: none;">
+  </div>
+
+  <div class="row">
+    <div id="edit-block" class="edit-block" style="display: none;">
+      <span id="edit-block-mode"></span>
+      <span id="edit-block-code-container"></span>
+      <span id="edit-block-quantity-parent">構成数：<input type="number" id="edit-block-quantity"
+          name="editBlockQuantity" min="1" required></span>
+      <button type="button" class="btn btn-primary btn-sm" id="execute-btn">実行</button>
+      <button type="button" class="btn btn-primary btn-sm" id="execute-insert-btn">実行してもう一つ挿入</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="close-btn">閉じる</button>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-auto">
+      <button type="button" class="btn btn-primary btn-sm" id="back-btn">戻る</button>
+    </div>
+  </div>
+
+
+</form>
+{% endblock content %}
+
+
+{% block extra_js %}
+<script>
+  'use strict';
+  var currentCompositionId; // 右クリックにて選択された要素
+  // undo,redoの状態をセット
+  // テンプレート変数を先に宣言
+  var undoState = '{{ undo  }}';
+  var redoState = '{{ redo  }}';
+  // ロジック部分
+  var imgUndoIconElement = document.getElementById("undo-icon");
+  // renderにてundo,redoがかえってくるときは、'True','False'という値でかえってくるが、
+  // JsonResponseにて、undo,redoがかえってくるときは、'true','false'という値でかえってきているみたい。
+  // なのでJsonResponseの返却値はjavascriptにてそのまま、if文として使えますが、renderで返却されたものは
+  // 文字列、'True','False'としてif文などで扱う必要あり。
+  if (undoState === 'True') {
+    imgUndoIconElement.classList.add("active");
+    imgUndoIconElement.addEventListener('click', onCliCkUndoIcon);
+  } else {
+    imgUndoIconElement.classList.remove("active");
+    imgUndoIconElement.removeEventListener('click', onCliCkUndoIcon);
+  }
+
+  var title = '{{title}}';
+  if (title === '構成を追加') {
+    productEditBlock();
+  }
+  // 製品の「挿入」項目作成
+  function productEditBlock() {
+    var editBlock = document.getElementById("edit-block");
+    editBlock.style.display = "block";
+    // modeを設定
+    var editBlockMode = document.getElementById("edit-block-mode");
+    editBlockMode.textContent = "【挿入】";
+    editBlockCreateinputElement();
+    // 閉じるボタンを削除
+    document.getElementById('close-btn').remove();
+    // 構成数項目を削除
+    document.getElementById('edit-block-quantity-parent').remove();
+  }
+
+  function onCliCkUndoIcon() {
+    // リクエストを送信
+    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    var requestUrl;
+    var title = "{{ title }}";
+    if (title == "構成を変更") {
+      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/undo/`;
+    } else {
+      var productId = document.querySelector('#part-list li').id;
+      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/undo/`;
+    }
+    window.location.href = requestUrl;
+  }
+  var imgRedoIconElement = document.getElementById("redo-icon");
+  if (redoState === 'True') {
+    imgRedoIconElement.classList.add("active");
+    imgRedoIconElement.addEventListener('click', onCliCkRedoIcon);
+  } else {
+    imgRedoIconElement.classList.remove("active");
+    imgRedoIconElement.removeEventListener('click', onCliCkRedoIcon);
+  }
+  function onCliCkRedoIcon() {
+    // リクエストを送信
+    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    var requestUrl;
+    var title = "{{ title }}";
+    if (title == "構成を変更") {
+      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/redo/`;
+    } else {
+      var productId = document.querySelector('#part-list li').id;
+      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/redo/`;
+    }
+    window.location.href = requestUrl;
+  }
+
+  var toggler = document.getElementsByClassName("part-up");
+  for (let i = 0; i < toggler.length; i++) {
+    toggler[i].addEventListener("click", onCliCkPartUpClass);
+  }
+  function onCliCkPartUpClass() {
+    var imgElement = this.querySelector(".expand_more, .expand_less");
+
+    if (imgElement) {
+      if (imgElement.src.includes("expand_more_black_24dp.svg")) {
+        imgElement.src = "{% static 'icons/expand_less_black_24dp.svg' %}";
+        imgElement.alt = "折りたたむ";
+        imgElement.title = "折りたたむ";
+        imgElement.classList.remove("expand_more");
+        imgElement.classList.add("expand_less");
+      } else {
+        imgElement.src = "{% static 'icons/expand_more_black_24dp.svg' %}";
+        imgElement.alt = "もっと見る";
+        imgElement.title = "もっと見る";
+        imgElement.classList.remove("expand_less");
+        imgElement.classList.add("expand_more");
+      }
+    }
+
+    this.parentElement.querySelector(".nested").classList.toggle("active");
+    this.classList.toggle("part-down");
+  }
+
+  var dragElm = document.getElementsByClassName("block-part-list");
+  for (let i = 0; i < dragElm.length; i++) {
+    dragElm[i].addEventListener("dragstart", dragstartEventHandler);
+    dragElm[i].addEventListener("dragover", dragoverEventHandler);
+    dragElm[i].addEventListener("dragleave", dragleaveEventHandler);
+    dragElm[i].addEventListener("drop", dropEventHandler);
+    dragElm[i].addEventListener("dragend", dragendEventHandler);
+  }
+  // dragstartのイベントハンドラ 
+  function dragstartEventHandler() {
+    event.stopPropagation(); // イベントのバブリングを停止
+    // event.dataTransfer.setData('text/plain', event.target.id);
+    var dataToTransfer = {
+      draggedId: event.target.id,
+      draggedGrandParentId: event.target.parentNode.parentNode.id
+    };
+
+    event.dataTransfer.setData('application/json', JSON.stringify(dataToTransfer));
+  }
+  // dragoverのイベントハンドラ 
+  function dragoverEventHandler() {
+    event.stopPropagation(); // イベントのバブリングを停止
+    event.preventDefault();
+    // エラーメッセージが表示された状態にて要素を上に移動をすると上に移動してくれない。
+    // エラーメッセージ分の高さが問題になっている模様。
+    // 今回はエラーメッセージが表示された状態にて移動がかかるシーンは無いようにしたので
+    // 対応はしない。
+    let rect = this.getBoundingClientRect();
+    if ((event.clientY - rect.top) < (this.clientHeight / 2)) {
+      //マウスカーソルの位置が要素の半分より上
+      this.style.borderTop = '2px solid blue';
+      this.style.borderBottom = '';
+    } else {
+      //マウスカーソルの位置が要素の半分より下
+      this.style.borderTop = '';
+      this.style.borderBottom = '2px solid blue';
+    }
+  }
+  // dragleaveのイベントハンドラ 
+  function dragleaveEventHandler() {
+    event.stopPropagation(); // イベントのバブリングを停止
+    this.style.borderTop = '';
+    this.style.borderBottom = '';
+  }
+  // dropのイベントハンドラ 
+  function dropEventHandler() {
+    event.stopPropagation(); // イベントのバブリングを停止
+    // event.preventDefault();
+    clearMessage();
+
+
+    //let draggedId = event.dataTransfer.getData('text/plain');
+    var receivedData = event.dataTransfer.getData('application/json');
+    var parsedData = JSON.parse(receivedData);
+    var draggedId = parsedData.draggedId;
+    var draggedGrandParentId = parsedData.draggedGrandParentId; // 移動元の親(li)のid
+
+    let elm_drag = document.getElementById(draggedId);
+    let elm_drag_code_tag = elm_drag.querySelector(".code");
+    let dragged_code = elm_drag_code_tag.innerText;
+    // console.log("dragged_code:" + dragged_code);
+    let parent = this.parentNode; // 移動先の親(ul)
+    var liParentElement = this.parentNode.parentNode; // 移動先の親(ul)の親(li)
+    for (var i = 0; i < parent.children.length; i++) {
+      var sibling = parent.children[i];
+      var codeElement = sibling.querySelector(".code");
+      var code = codeElement.innerText;
+      var id = sibling.id;
+      // console.log(code, id);
+      if (draggedId === id) {
+        continue;
+      } else if (code === dragged_code) {
+        setError("同一の階層に同一の code が存在します。エラーが発生しました。");
+        this.style.borderTop = '';
+        this.style.borderBottom = '';
+        return; // エラーが発生した場合は処理を中断
+      }
+    }
+
+
+    // このあたりにドラッグしたidとthisのidとその前"before"、後"after"情報をつけてajaxにてデータを投げる
+    // insertBefore実行前に値を保持して投げないと想定通りにならないかもしれないのでそこらへんを気にして作る。
+    // str
+    let rect = this.getBoundingClientRect();
+    console.log("this.id:" + this.id);
+    var insertPosition;
+    if ((event.clientY - rect.top) < (this.clientHeight / 2)) {
+      console.log("before");
+      insertPosition = "before";
+    } else {
+      console.log("after");
+      insertPosition = "after";
+    }
+
+    console.log("draggedId:" + draggedId);
+    // Ajaxリクエストを送信
+    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    var requestUrl;
+    var title = "{{ title }}";
+    if (title == "構成を変更") {
+      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/drop/?drop_target_id=${this.id}&insert_position=${insertPosition}&dragged_id=${draggedId}`;
+    } else {
+      var productId = document.querySelector('#part-list li').id;
+      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/drop/?drop_target_id=${this.id}&insert_position=${insertPosition}&dragged_id=${draggedId}`;
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", requestUrl, false);
+    xhr.send();
+
+    if (xhr.status === 200) {
+      var data = JSON.parse(xhr.responseText);
+      // if (data.exists) {
+      if (data.success) {
+        // 移動先の親の実使用数より自身の実使用数を再計算
+        var parentUsedquantityElement = liParentElement.querySelector(".usedquantity");
+        var quantityElement = elm_drag.querySelector(".quantity");
+        var usedquantityElement = elm_drag.querySelector(".usedquantity");
+        usedquantityElement.textContent = quantityElement.textContent * parentUsedquantityElement.textContent;
+
+        if ((event.clientY - rect.top) < (this.clientHeight / 2)) {
+          //マウスカーソルの位置が要素の半分より上
+          this.parentNode.insertBefore(elm_drag, this);
+        } else {
+          //マウスカーソルの位置が要素の半分より下
+          this.parentNode.insertBefore(elm_drag, this.nextSibling);
+        }
+        // this.style.borderTop = '';
+        // this.style.borderBottom = '';
+
+        var draggedGrandParentElement = document.getElementById(draggedGrandParentId);  // 移動元の親(li)
+        var draggedParentElement = draggedGrandParentElement.querySelector("ul");
+        var draggedChildrens = draggedParentElement.querySelectorAll(".code");
+        if (draggedChildrens.length == 0) {
+          // 子として最後の１件だった場合
+          var spanElement = draggedGrandParentElement.querySelector("span");
+          // ulの親のliの子のspan要素のクリックイベントを削除する。
+          spanElement.removeEventListener("click", onCliCkPartUpClass);
+          // ulの親のliの子のspan要素のクラスをpart-upからpart-blockに変更する。
+          spanElement.setAttribute("class", "part-block");
+          // more-or-lessクラス要素を取得
+          var moreOrLessElement = draggedGrandParentElement.querySelector(".more-or-less");
+          // more-or-lessクラスをmore-or-less-dummyクラスへ変更
+          moreOrLessElement.setAttribute("class", "more-or-less-dummy");
+          // 中のimgタグを削除
+          let imgElement = moreOrLessElement.querySelector(".expand_more, .expand_less");
+          imgElement.remove();
+          // ul要素事削除する。
+          draggedParentElement.remove();
+        }
+        // undo,redoの状態をセット
+        // ロジック部分
+        var imgUndoIconElement = document.getElementById("undo-icon");
+        if (data.undo) {
+          imgUndoIconElement.classList.add("active");
+          imgUndoIconElement.addEventListener('click', onCliCkUndoIcon);
+        } else {
+          imgUndoIconElement.classList.remove("active");
+          imgUndoIconElement.removeEventListener('click', onCliCkUndoIcon);
+        }
+        var imgRedoIconElement = document.getElementById("redo-icon");
+        if (data.redo) {
+          imgRedoIconElement.classList.add("active");
+          imgRedoIconElement.addEventListener('click', onCliCkRedoIcon);
+        } else {
+          imgRedoIconElement.classList.remove("active");
+          imgRedoIconElement.removeEventListener('click', onCliCkRedoIcon);
+        }
+
+      } else {
+        // setError("エラーがありました。");
+        setError(data.message);
+      }
+      this.style.borderTop = '';
+      this.style.borderBottom = '';
+      } else {
+      console.error("エラーが発生しました:", xhr.statusText);
+    }
+
+    // end
+
+  }
+  // dragendのイベントハンドラ 
+  function dragendEventHandler() {
+    event.stopPropagation(); // イベントのバブリングを停止
+    // event.preventDefault();
+    // clearMessage();
+  }
+
+  // エラーメッセージをセットする関数
+  function setError(message) {
+    var errorContainer = document.getElementById("message-container");
+    errorContainer.innerHTML = '<div class="error"><p>An error occurred: ' + message + '</p></div>';
+  }
+  // 更新が終了したメッセージをセットする関数
+  function setSuccessMessage(message) {
+    var successContainer = document.getElementById("message-container");
+    successContainer.innerHTML = '<div class="success"><p>' + message + '</p></div>';
+  }
+  // メッセージをクリアする関数
+  function clearMessage() {
+    var messageContainer = document.getElementById("message-container");
+    messageContainer.innerHTML = ''; // メッセージコンテナの内容をクリア
+  }
+
+
+  // edit-block内の「閉じる」ボタンイベント登録
+  var closeBtn = document.getElementById('close-btn');
+  function onCliCkCloseBtn() {
+    var ulElement = document.getElementById("part-list");
+    ulElement.style.pointerEvents = 'auto'; // マウスイベントを有効化
+    var editBlock = document.getElementById("edit-block");
+    editBlock.style.display = "none"; // 編集ブロックを非表示にする
+    // 選択した行の背景をクリア
+    selectLineBgClear();
+    // メッセージをクリア
+    clearMessage();
+    // クリックイベントリスナーを追加
+    document.addEventListener("click", clickEventHandler);
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener("click", onCliCkCloseBtn);
+  }
+
+  // 「戻る」ボタンイベント登録
+  var backBtn = document.getElementById('back-btn');
+  function onCliCkBackBtn() {
+    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    var requestUrl = `/${app_name}/parts-structure/`;
+    window.location.href = requestUrl;
+  }
+  backBtn.addEventListener("click", onCliCkBackBtn);
+
+
+  // 選択した行の背景をクリア
+  function selectLineBgClear() {
+    var ulElement = document.getElementById("part-list");
+    if (ulElement) {
+      var spanPartInElements = ulElement.querySelectorAll('span.part-up');
+      spanPartInElements.forEach(function (spanPartInElement) {
+        spanPartInElement.style.background = "";
+      });
+      var spanPartInElements = ulElement.querySelectorAll('span.part-block');
+      spanPartInElements.forEach(function (spanPartInElement) {
+        spanPartInElement.style.background = "";
+      });
+    }
+  }
+
+
+  var ulElement = document.getElementById("part-list");
+  if (ulElement) {
+    var liElements = ulElement.querySelectorAll('li'); // ul内のすべてのli要素を取得
+    // 右クリックメニューを表示するイベントリスナーを追加
+    liElements.forEach(function (liElement) {
+      liElement.addEventListener("contextmenu", (event) => contextmenuEventHandler(event, liElement));
+    });
+  }
+  // 右クリックイベントハンドラ
+  function contextmenuEventHandler(event, liElement) {
+
+    event.stopPropagation(); // イベントのバブリングを停止
+    event.preventDefault(); // デフォルトの右クリックメニューを無効にする
+
+    // イベントが発生した要素のIDを取得
+    currentCompositionId = event.currentTarget.id;
+    // console.log("右クリックされた要素のID: " + currentCompositionId);
+
+    // 選択した行の背景をクリア
+    selectLineBgClear();
+    var spanElement = liElement.querySelector('span.part-up');
+    if (spanElement) {
+      spanElement.style.background = "#eee";
+    } else {
+      var spanElement = liElement.querySelector('span.part-block');
+      if (spanElement) {
+        spanElement.style.background = "#eee";
+      }
+    }
+
+    var menu = document.getElementById("context-menu");
+    menu.style.left = event.clientX + "px";
+    menu.style.top = event.clientY + "px";
+    menu.style.display = "block";
+    // div要素を追加したい親要素を取得
+    var parentElement = document.getElementById("context-menu");
+    // すべての子要素を一旦削除
+    parentElement.innerHTML = '';
+    // "block-part-list"クラスが設定されている場合の処理
+    // つまり、製品以外（部品）の処理。
+    if (liElement.classList.contains('block-part-list')) {
+      contextMenuAddInsert(parentElement);
+      contextMenuAddChildrenInsert(parentElement);
+      contextMenuAddUpdate(parentElement);
+      contextMenuAddDelete(parentElement);
+    } else {
+      // 製品の処理。
+      contextMenuAddChildrenInsert(parentElement);
+      contextMenuAddDelete(parentElement);
+    }
+  }
+
+  // クリックイベントリスナーを追加
+  function clickEventHandler(event) {
+    var menu = document.getElementById("context-menu");
+    menu.style.display = "none"; // メニューを非表示にする
+    // 右クリックにて表示されたメニュー以外のクリック
+    if (!menu.contains(event.target)) {
+      // 選択した行の背景をクリア
+      selectLineBgClear();
+    }
+  }
+  document.addEventListener("click", clickEventHandler);
+
+  // 右クリックメニューの「挿入」項目クリック
+  function onClickMenuInsert() {
+    var editBlock = document.getElementById("edit-block");
+    editBlock.style.display = "block";
+    var ulElement = document.getElementById("part-list");
+    if (ulElement) {
+      ulElement.style.pointerEvents = 'none'; // マウスイベントを無効化
+    }
+    // modeを設定
+    var editBlockMode = document.getElementById("edit-block-mode");
+    editBlockMode.textContent = "【挿入】";
+    editBlockCreateinputElement();
+  }
+  // 右クリックメニューの「子の挿入」項目クリック
+  function onClickMenuChildrenInsert() {
+    var editBlock = document.getElementById("edit-block");
+    editBlock.style.display = "block";
+    var ulElement = document.getElementById("part-list");
+    ulElement.style.pointerEvents = 'none'; // マウスイベントを無効化
+
+    // modeを設定
+    var editBlockMode = document.getElementById("edit-block-mode");
+    editBlockMode.textContent = "【子の挿入】";
+    editBlockCreateinputElement();
+  }
+  // 右クリックメニューの「変更」項目クリック
+  function onClickMenuUpdate() {
+    var editBlock = document.getElementById("edit-block");
+    editBlock.style.display = "block";
+    var ulElement = document.getElementById("part-list");
+    ulElement.style.pointerEvents = 'none'; // マウスイベントを無効化
+
+    // modeを設定
+    var editBlockMode = document.getElementById("edit-block-mode");
+    editBlockMode.textContent = "【変更】";
+    editBlockCreateshowElement(document.getElementById(currentCompositionId));
+  }
+  // 右クリックメニューの「削除」項目クリック
+  function onClickMenuDelete() {
+
+
+    // Ajaxリクエストを送信
+    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    var requestUrl;
+    var title = "{{ title }}";
+    if (title == "構成を変更") {
+      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/del/?current_parts_structure_id=${currentCompositionId}`;
+    } else {
+      var productId = document.querySelector('#part-list li').id;
+      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/del/?current_parts_structure_id=${currentCompositionId}`;
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", requestUrl, false); // false を指定して同期リクエストにする
+    xhr.send();
+    if (xhr.status === 200) {
+      var data = JSON.parse(xhr.responseText);
+      if (data.exists) {
+        var productId = document.querySelector('#part-list li').id;
+        // 製品の削除処理実行の場合、一覧画面へ戻す。
+        if(currentCompositionId == productId){
+          var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+          var requestUrl = `/${app_name}/parts-structure/`;
+          window.location.href = requestUrl;
+        }
+
+        var currentLiElement = document.getElementById(currentCompositionId);
+        var parent = currentLiElement.parentNode;
+        // 以下のコードの場合、子、孫、ひ孫を含めて".code"の要素をchildrenに格納してしまいます。
+        // var children = parent.querySelectorAll(".code");
+        // やりたい内容は直接の子の".code"の要素をchildrenに格納したいので以下のように変更。
+        // ただ子レベルに".code"が存在しないので代替クラスとして".block-part-list"に変更。
+        var children = parent.querySelectorAll(":scope > .block-part-list");
+        if (children.length == 1) {
+          // 子として最後の１件だった場合
+          var grandParent = parent.parentNode;
+          // part-upクラス要素を取得
+          // var spanElement = grandParent.querySelector("span");
+          var spanElement = grandParent.querySelector(".part-up");
+          // ulの親のliの子のspan要素のクリックイベントを削除する。
+          spanElement.removeEventListener("click", onCliCkPartUpClass);
+          // ulの親のliの子のpart-upクラスをpart-blockに変更する。
+          spanElement.setAttribute("class", "part-block");
+          // more-or-lessクラス要素を取得
+          var moreOrLessElement = grandParent.querySelector(".more-or-less");
+          // more-or-lessクラスをmore-or-less-dummyクラスへ変更
+          moreOrLessElement.setAttribute("class", "more-or-less-dummy");
+          // img要素を削除
+          const elementsToRemove = moreOrLessElement.querySelectorAll(".expand_more, .expand_less");
+          elementsToRemove.forEach(element => {
+            moreOrLessElement.removeChild(element);
+          });
+
+          // ul要素事削除する。
+          parent.remove();
+        } else {
+          // 子として最後の１件でない場合その要素の削除のみ行う。
+          currentLiElement.remove();
+        }
+
+        // undo,redoの状態をセット
+        // ロジック部分
+        var imgUndoIconElement = document.getElementById("undo-icon");
+        if (data.undo) {
+          imgUndoIconElement.classList.add("active");
+          imgUndoIconElement.addEventListener('click', onCliCkUndoIcon);
+        } else {
+          imgUndoIconElement.classList.remove("active");
+          imgUndoIconElement.removeEventListener('click', onCliCkUndoIcon);
+        }
+        var imgRedoIconElement = document.getElementById("redo-icon");
+        if (data.redo) {
+          imgRedoIconElement.classList.add("active");
+          imgRedoIconElement.addEventListener('click', onCliCkRedoIcon);
+        } else {
+          imgRedoIconElement.classList.remove("active");
+          imgRedoIconElement.removeEventListener('click', onCliCkRedoIcon);
+        }
+
+      } else {
+        setError("エラーがありました。");
+      }
+    } else {
+      console.error("HTTPエラーが発生しました。ステータスコード:", xhr.status);
+    }
+
+
+
+
+  }
+  // 挿入、子の挿入モードの編集画面を作成
+  function editBlockCreateinputElement() {
+    // span要素を作成
+    var spanElement = document.createElement("span");
+    spanElement.textContent = "コード：";
+    // input要素を作成
+    var inputElement = document.createElement("input");
+    inputElement.setAttribute("type", "text");
+    inputElement.setAttribute("id", "edit-block-code");
+    inputElement.setAttribute("name", "edit_block_code");
+    inputElement.setAttribute("pattern", "[a-zA-Z0-9]+");
+    inputElement.setAttribute("title", "半角数字のみ入力してください");
+    // コンテナを取得
+    var containerElement = document.getElementById("edit-block-code-container");
+    // コンテナの子要素を一旦削除
+    containerElement.innerHTML = '';
+    // span要素にinput要素を追加
+    spanElement.appendChild(inputElement);
+
+    // 作成した要素をコンテナに追加
+    containerElement.appendChild(spanElement);
+    // input要素にフォーカスを当てる
+    inputElement.focus();
+    if (document.getElementById("edit-block-quantity")) {
+      // 構成数項目をクリア
+      document.getElementById("edit-block-quantity").value = "";
+    } else {
+      // 構成数の要素を追加
+      document.getElementById('edit-block-code-container').insertAdjacentHTML('afterend', `
+        <span id="edit-block-quantity-parent">構成数：<input type="number" id="edit-block-quantity" name="editBlockQuantity" min="1" required></span>
+        `);
+    }
+    // 閉じるボタンがなければ追加 
+    if (!document.getElementById('close-btn')) {
+      document.getElementById('execute-insert-btn').insertAdjacentHTML('afterend', `
+        <button type="button" class="btn btn-secondary" id="close-btn">閉じる</button>
+        `);
+      // edit-block内の「閉じる」ボタンイベント登録
+      var closeBtn = document.getElementById('close-btn');
+      closeBtn.addEventListener("click", onCliCkCloseBtn);
+    }
+
+    var menu = document.getElementById("context-menu");
+    menu.style.display = "none"; // メニューを非表示にする
+
+    // クリックイベントリスナーを削除
+    document.removeEventListener("click", clickEventHandler);
+  }
+  // 変更モードの編集画面を作成
+  function editBlockCreateshowElement(element) {
+    // span要素を作成
+    var spanElement = document.createElement("span");
+    spanElement.textContent = "コード：";
+    // span要素を作成
+    var spanInElement = document.createElement("span");
+    spanInElement.setAttribute("id", "edit-block-code");
+    // クラス名がcodeの要素を取得
+    var codeElement = element.querySelector(".code");
+
+    spanInElement.textContent = codeElement.textContent;
+    // コンテナを取得
+    var containerElement = document.getElementById("edit-block-code-container");
+    // コンテナの子要素を一旦削除
+    containerElement.innerHTML = '';
+    // span要素にinput要素を追加
+    spanElement.appendChild(spanInElement);
+
+    // 作成した要素をコンテナに追加
+    containerElement.appendChild(spanElement);
+    // クラス名がquantityの要素を取得
+    var quantityElement = element.querySelector(".quantity");
+    var editBlockQuantity = document.getElementById("edit-block-quantity");
+    editBlockQuantity.value = quantityElement.textContent;
+
+    // input要素にフォーカスを当てる
+    editBlockQuantity.focus();
+    // メニューを非表示にする
+    var menu = document.getElementById("context-menu");
+    menu.style.display = "none";
+
+    // クリックイベントリスナーを削除
+    document.removeEventListener("click", clickEventHandler);
+
+  }
+  // 編集画面の「実行」ボタンを押した場合の処理
+  var executeBtn = document.getElementById('execute-btn');
+  executeBtn.addEventListener('click', function () {
+    var editBlockMode = document.getElementById("edit-block-mode");
+    // 「挿入」の処理
+    if (editBlockMode.textContent == "【挿入】") {
+      insertModeExecute("executeBtn", this.form);
+    }
+    // 「子の挿入」の処理
+    if (editBlockMode.textContent == "【子の挿入】") {
+      insertChildModeExecute("executeBtn", this.form);
+    }
+    // 「変更」の処理
+    if (editBlockMode.textContent == "【変更】") {
+      updateModeExecute("executeBtn");
+    }
+
+
+
+  });
+
+  // 編集画面の「実行してもう一つ挿入」ボタンを押した場合の処理
+  var executeInsertBtn = document.getElementById('execute-insert-btn');
+  executeInsertBtn.addEventListener('click', function () {
+    var editBlockMode = document.getElementById("edit-block-mode");
+    // 「挿入」の処理
+    if (editBlockMode.textContent == "【挿入】") {
+      var error = insertModeExecute("executeInsertBtn", this.form);
+      // エラーだった場合、項目値は消さずにエラーメッセージを表示して戻る。
+      if (!error) {
+        return;
+      }
+      document.getElementById("edit-block-code").value = "";
+      document.getElementById("edit-block-quantity").value = "";
+    }
+    // 「子の挿入」の処理
+    if (editBlockMode.textContent == "【子の挿入】") {
+      insertChildModeExecute("executeInsertBtn", this.form);
+      // エラーだった場合、項目値は消さずにエラーメッセージを表示して戻る。
+      if (!error) {
+        return;
+      }
+      document.getElementById("edit-block-code").value = "";
+      document.getElementById("edit-block-quantity").value = "";
+    }
+    // 「変更」の処理
+    // 子の実使用数の値を更新する必要有り。そちらのロジック構築する。
+    if (editBlockMode.textContent == "【変更】") {
+      updateModeExecute("executeInsertBtn");
+    }
+
+
+
+  });
+
+  // 子要素の挿入処理
+  function insertChildElement(new_id, name, parentUsedquantity) {
+    // 新しいli要素を作成
+    var moreOrLess = '<span class="more-or-less-dummy"></span>';
+    var newLiElement = newLiElementFnc(new_id, name, parentUsedquantity, moreOrLess);
+    // 選択された要素を取得
+    var originalLiElement = document.getElementById(currentCompositionId);
+    // part-blockクラス要素を取得
+    //var spanElement = originalLiElement.querySelector("span");
+    var spanElement = originalLiElement.querySelector(".part-block");
+    // part-blockクラスをpart-upクラスへ変更
+    spanElement.setAttribute("class", "part-up");
+    // part-downクラスを追加
+    spanElement.classList.add("part-down");
+    // more-or-less-dummyクラス要素を取得
+    var moreOrLessElement = originalLiElement.querySelector(".more-or-less-dummy");
+    // more-or-less-dummyクラスをmore-or-lessクラスへ変更
+    moreOrLessElement.setAttribute("class", "more-or-less");
+    // imgタグ追加'less'
+    var imgElement = document.createElement("img");
+    imgElement.src = "{% static 'icons/expand_less_black_24dp.svg' %}";
+    imgElement.alt = "折りたたむ";
+    imgElement.title = "折りたたむ";
+    imgElement.classList.add("expand_less");
+    moreOrLessElement.appendChild(imgElement);
+
+    // 新しいul要素を作成
+    var newUlElement = document.createElement("ul");
+    newUlElement.setAttribute("class", "nested");
+
+    // 新しいul要素の中に新しいli要素を追加
+    newUlElement.appendChild(newLiElement);
+    // id要素の直後に新しいul要素を挿入
+    originalLiElement.appendChild(newUlElement);
+    // 最初から子を展開して見える状態にする。
+    newUlElement.classList.add("active");
+    // span要素にクリックイベントを追加する。
+    spanElement.addEventListener("click", onCliCkPartUpClass);
+    // spanElement.addEventListener("click", function () {
+    //   newUlElement.classList.toggle("active");
+    //   spanElement.classList.toggle("part-down");
+    // });
+
+  }
+
+  // 新しいli要素を作成
+  function newLiElementFnc(new_id, name, parentUsedquantity, moreOrLess) {
+    var newLiElement = document.createElement("li");
+    //    newLiElement.setAttribute("id", newPartHierarchyId++);
+    newLiElement.setAttribute("id", new_id);
+    newLiElement.setAttribute("class", "block-part-list");
+    newLiElement.setAttribute("draggable", "true");
+    // 新しいspan要素を作成
+    var newSpanElement = document.createElement("span");
+    newSpanElement.setAttribute("class", "part-block");
+    // 新しいspan要素の中に追加する内容を設定
+    newSpanElement.innerHTML = moreOrLess
+      + '<span class="code">'
+      + document.getElementById("edit-block-code").value
+      + '</span>_'
+      + name
+      + ':<span class="quantity">'
+      + document.getElementById("edit-block-quantity").value
+      + '</span>'
+      + ',<span class="usedquantity">'
+      + document.getElementById("edit-block-quantity").value * parentUsedquantity
+      + '</span>'
+      ;
+    // 新しいspan要素をli要素の中に追加
+    newLiElement.appendChild(newSpanElement);
+    // ドラッグイベントを追加
+    newLiElement.addEventListener("dragstart", dragstartEventHandler);
+    newLiElement.addEventListener("dragover", dragoverEventHandler);
+    newLiElement.addEventListener("dragleave", dragleaveEventHandler);
+    newLiElement.addEventListener("drop", dropEventHandler);
+    newLiElement.addEventListener("dragend", dragendEventHandler);
+    // 右クリックイベントを追加
+    newLiElement.addEventListener("contextmenu", (event) => contextmenuEventHandler(event, newLiElement));
+
+    return newLiElement;
+  }
+
+  // 子の要素を検索し実使用数を再計算してセット
+  function reChildCalculation(parentLiElement, parentUsedquantity) {
+    var result = [];
+
+    // 親li要素から子要素のliを取得
+    var nestedElement = parentLiElement.querySelector(".nested");
+    if (!nestedElement) {
+      return;
+    }
+    var children = nestedElement.children;
+
+    // 各li要素を処理
+    for (var i = 0; i < children.length; i++) {
+      var child = children[i];
+      var childQuantityElement = child.querySelector(".quantity");
+      // 子のul要素がある場合は再帰的に処理
+      var nestedGrandChild = child.querySelector(".nested");
+      if (nestedGrandChild) {
+        reChildCalculation(child, childQuantityElement.textContent * parentUsedquantity);
+      }
+      var childUsedquantityElement = child.querySelector(".usedquantity");
+      childUsedquantityElement.textContent = childQuantityElement.textContent * parentUsedquantity;
+    }
+
+  }
+  // 「挿入」の処理
+  function insertModeExecute(btn, form) {
+    // フォームバリデーションをトリガー
+    // inputElement.setAttribute("pattern", "[0-9]+");
+    // こちらのpatternのチェックを実行する。
+    // submitタグだとこの書き方は不要だが、buttonタグだとこの書き方が必要になる。
+    if (!form.reportValidity()) {
+      // バリデーションエラーがある場合の処理
+      return false; // エラーがある場合は処理を中断
+    }
+    clearMessage();
+    let editBlockCode = document.getElementById("edit-block-code");
+    if(currentCompositionId) {
+      let parentUlElement = document.getElementById(currentCompositionId).parentNode; // 親(ul)
+      for (var i = 0; i < parentUlElement.children.length; i++) {
+        let codeElement = parentUlElement.children[i].querySelector(".code");
+        let code = codeElement.innerText;
+        if (code === editBlockCode.value) {
+          setError("同一の階層に同一の code が存在します。エラーが発生しました。");
+          return; // エラーが発生した場合は処理を中断
+        }
+      }
+    }
+
+    editBlockCode = document.getElementById("edit-block-code");
+    var editBlockQuantity = document.getElementById("edit-block-quantity");
+    // Ajaxリクエストを送信
+    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    var requestUrl;
+    var executeProcess;
+    var title = "{{ title }}";
+    if (title == "構成を変更") {
+      // 部品の処理 
+      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/add/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+    }
+    if (title == "構成を追加") {
+      if (document.getElementById("part-list")) {
+        // 部品の処理
+        var productId = document.querySelector('#part-list li').id;
+        requestUrl = `/${app_name}/parts-structure/add/` + productId + `/add/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+      } else {
+        // 製品の処理
+        requestUrl = `/${app_name}/parts-structure/add/product/?edit_block_code=${editBlockCode.value}`;
+        executeProcess = 'add-product';
+      }
+    }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", requestUrl, false); // false を指定して同期リクエストにする
+    xhr.send();
+
+    if (xhr.status === 200) {
+      var data = JSON.parse(xhr.responseText);
+
+      // if (data.exists) {
+      if (data.success) {
+        if (document.getElementById("part-list")) {
+          // 部品の処理 
+          let parentLiElement = document.getElementById(currentCompositionId).parentNode.parentNode;
+          var parentUsedquantityElement = parentLiElement.querySelector(".usedquantity");
+          var moreOrLess = '<span class="more-or-less-dummy"></span>';
+          var newLiElement = newLiElementFnc(data.new_id, data.name, parentUsedquantityElement.textContent, moreOrLess);
+          var existingLiElement = document.getElementById(currentCompositionId);
+          existingLiElement.parentNode.insertBefore(newLiElement, existingLiElement);
+        } else {
+          // 製品の要素作成
+          createProductElement(data.new_id, data.name);
+        }
+
+        // undo,redoの状態をセット
+        // ロジック部分
+        var imgUndoIconElement = document.getElementById("undo-icon");
+        if (data.undo) {
+          imgUndoIconElement.classList.add("active");
+          imgUndoIconElement.addEventListener('click', onCliCkUndoIcon);
+        } else {
+          imgUndoIconElement.classList.remove("active");
+          imgUndoIconElement.removeEventListener('click', onCliCkUndoIcon);
+        }
+        var imgRedoIconElement = document.getElementById("redo-icon");
+        if (data.redo) {
+          imgRedoIconElement.classList.add("active");
+          imgRedoIconElement.addEventListener('click', onCliCkRedoIcon);
+        } else {
+          imgRedoIconElement.classList.remove("active");
+          imgRedoIconElement.removeEventListener('click', onCliCkRedoIcon);
+        }
+
+        if (btn == 'executeBtn') {
+          onCliCkCloseBtn();
+        } else {
+          // 構成を追加の画面で製品の挿入モードで「実行してもう一つ挿入」ボタンを押した時
+          // 子の挿入画面を構築して表示する。その際、カーソルが当たっている変数の値に製品のidをセットしておく
+          if (executeProcess) {
+            currentCompositionId = data.new_id;
+            onClickMenuChildrenInsert();
+          }else{
+            editBlockCode = document.getElementById("edit-block-code");
+            editBlockCode.focus();
+          }
+
+        }
+      } else {
+        // setError("コードが存在しません。");
+        setError(data.message);
+      }
+    } else {
+      console.error("HTTPエラーが発生しました。ステータスコード:", xhr.status);
+    }
+
+  }
+  // 「子の挿入」の処理
+  function insertChildModeExecute(btn, form) {
+    // フォームバリデーションをトリガー
+    // inputElement.setAttribute("pattern", "[0-9]+");
+    // こちらのpatternのチェックを実行する。
+    // submitタグだとこの書き方は不要だが、buttonタグだとこの書き方が必要になる。
+    if (!form.reportValidity()) {
+      // バリデーションエラーがある場合の処理
+      return false; // エラーがある場合は処理を中断
+    }
+    clearMessage();
+    let editBlockCode = document.getElementById("edit-block-code");
+    let parentUlElement = document.getElementById(currentCompositionId).parentNode; // 親(ul)
+    let currentLiElement = document.getElementById(currentCompositionId);
+    let ulElement = currentLiElement.querySelector("ul.nested");
+    if(ulElement) {
+      for (var i = 0; i < ulElement.children.length; i++) {
+        let codeElement = ulElement.children[i].querySelector(".code");
+        let code = codeElement.innerText;
+        if (code === editBlockCode.value) {
+          setError("同一の階層に同一の code が存在します。エラーが発生しました。");
+          return; // エラーが発生した場合は処理を中断
+        }
+      }
+    }
+
+    editBlockCode = document.getElementById("edit-block-code");
+    var editBlockQuantity = document.getElementById("edit-block-quantity");
+    // Ajaxリクエストを送信
+    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    var requestUrl;
+    var title = "{{ title }}";
+    if (title == "構成を変更") {
+      // 変更の処理 
+      var requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/addChildren/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+    } else {
+      // 追加の処理
+      // 'part-list' IDを持つulタグの最初の子要素（liタグ）のIDを取得する
+      var productId = document.querySelector('#part-list li').id;
+      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/addChildren/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+    }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", requestUrl, false); // false を指定して同期リクエストにする
+    xhr.send();
+
+    if (xhr.status === 200) {
+      var data = JSON.parse(xhr.responseText);
+      // if (data.exists) {
+      if (data.success) {
+        var editBlockMode = document.getElementById("edit-block-mode");
+        currentLiElement = document.getElementById(currentCompositionId);
+        var spanElement = currentLiElement.querySelector("span");
+
+        var parentUsedquantityElement = currentLiElement.querySelector(".usedquantity");
+        if (spanElement.classList.contains('part-up')) {
+          ulElement = currentLiElement.querySelector("ul.nested");
+          var moreOrLess = '<span class="more-or-less-dummy"></span>';
+          var newLiElement = newLiElementFnc(data.new_id, data.name, parentUsedquantityElement.textContent, moreOrLess);
+          ulElement.appendChild(newLiElement);
+        } else {
+          insertChildElement(data.new_id, data.name, parentUsedquantityElement.textContent);
+        }
+
+        // undo,redoの状態をセット
+        // ロジック部分
+        var imgUndoIconElement = document.getElementById("undo-icon");
+        if (data.undo) {
+          imgUndoIconElement.classList.add("active");
+          imgUndoIconElement.addEventListener('click', onCliCkUndoIcon);
+        } else {
+          imgUndoIconElement.classList.remove("active");
+          imgUndoIconElement.removeEventListener('click', onCliCkUndoIcon);
+        }
+        var imgRedoIconElement = document.getElementById("redo-icon");
+        if (data.redo) {
+          imgRedoIconElement.classList.add("active");
+          imgRedoIconElement.addEventListener('click', onCliCkRedoIcon);
+        } else {
+          imgRedoIconElement.classList.remove("active");
+          imgRedoIconElement.removeEventListener('click', onCliCkRedoIcon);
+        }
+
+        if (btn == 'executeBtn') {
+          onCliCkCloseBtn();
+        } else {
+          editBlockCode = document.getElementById("edit-block-code");
+          editBlockCode.focus();
+        }
+
+      } else {
+        // setError("コードが存在しません。");
+        setError(data.message);
+      }
+    } else {
+      console.error("HTTPエラーが発生しました。ステータスコード:", xhr.status);
+    }
+  }
+
+  // 「変更」の処理
+  function updateModeExecute(btn) {
+    // 選択された要素を取得
+    var editBlockCode = document.getElementById("edit-block-code");
+    // クラス名がquantityの要素を取得
+    var currentLiElement = document.getElementById(currentCompositionId);
+    var quantityElement = currentLiElement.querySelector(".quantity");
+    var usedquantityElement = currentLiElement.querySelector(".usedquantity");
+    var parentLiElement = currentLiElement.parentNode.parentNode;
+    var parentUsedquantityElement = parentLiElement.querySelector(".usedquantity");
+    var editBlockQuantity = document.getElementById("edit-block-quantity");
+    // Ajaxリクエストを送信
+    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    var requestUrl;
+    var title = "{{ title }}";
+    if (title == "構成を変更") {
+      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/mod/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.textContent}&edit_block_quantity=${editBlockQuantity.value}`;
+    } else {
+      // 追加の処理
+      // 'part-list' IDを持つulタグの最初の子要素（liタグ）のIDを取得する
+      var productId = document.querySelector('#part-list li').id;
+      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/mod/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.textContent}&edit_block_quantity=${editBlockQuantity.value}`;
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", requestUrl, false); // false を指定して同期リクエストにする
+    xhr.send();
+
+    if (xhr.status === 200) {
+      var data = JSON.parse(xhr.responseText);
+
+      if (data.exists) {
+        quantityElement.textContent = editBlockQuantity.value;
+        usedquantityElement.textContent = editBlockQuantity.value * parentUsedquantityElement.textContent;
+        reChildCalculation(currentLiElement, usedquantityElement.textContent);
+
+        // undo,redoの状態をセット
+        // ロジック部分
+        var imgUndoIconElement = document.getElementById("undo-icon");
+        if (data.undo) {
+          imgUndoIconElement.classList.add("active");
+          imgUndoIconElement.addEventListener('click', onCliCkUndoIcon);
+        } else {
+          imgUndoIconElement.classList.remove("active");
+          imgUndoIconElement.removeEventListener('click', onCliCkUndoIcon);
+        }
+        var imgRedoIconElement = document.getElementById("redo-icon");
+        if (data.redo) {
+          imgRedoIconElement.classList.add("active");
+          imgRedoIconElement.addEventListener('click', onCliCkRedoIcon);
+        } else {
+          imgRedoIconElement.classList.remove("active");
+          imgRedoIconElement.removeEventListener('click', onCliCkRedoIcon);
+        }
+
+        if (btn == 'executeBtn') {
+          onCliCkCloseBtn();
+        } else {
+          onClickMenuInsert();
+        }
+
+      } else {
+        setError("エラーがありました。");
+      }
+    } else {
+      console.error("HTTPエラーが発生しました。ステータスコード:", xhr.status);
+    }
+
+  }
+
+  // 製品の要素作成
+  function createProductElement(new_id, name) {
+    // DIV要素を取得
+    const divElement = document.getElementById('row-part-list');
+    // UL要素を作成
+    const ulElement = document.createElement('ul');
+    ulElement.id = 'part-list';
+    // LI要素を作成
+    const liElement = document.createElement('li');
+    liElement.id = new_id;
+    // SPAN要素(part-block)を作成
+    const spanPartBlock = document.createElement('span');
+    spanPartBlock.className = "part-block";
+    // SPAN要素(more-or-less-dummy)を作成
+    const spanMoreOrLessDummy = document.createElement('span');
+    spanMoreOrLessDummy.className = "more-or-less-dummy";
+    // SPAN要素(code)を作成
+    const spanCode = document.createElement('span');
+    spanCode.className = "code";
+    spanCode.textContent = document.getElementById("edit-block-code").value;
+    // SPAN要素(quantity)を作成
+    const spanQuantity = document.createElement('span');
+    spanQuantity.className = "quantity";
+    spanQuantity.appendChild(document.createTextNode("1"));
+
+    // SPAN要素(usedquantity)を作成
+    const spanUsedQuantity = document.createElement('span');
+    spanUsedQuantity.className = "usedquantity";
+    spanUsedQuantity.appendChild(document.createTextNode("1"));
+    // すべての要素を組み合わせる
+    spanPartBlock.appendChild(spanMoreOrLessDummy);
+    spanPartBlock.appendChild(spanCode);
+    spanPartBlock.appendChild(document.createTextNode(name));
+    spanPartBlock.appendChild(spanQuantity);
+    spanPartBlock.appendChild(document.createTextNode(","));
+    spanPartBlock.appendChild(spanUsedQuantity);
+    liElement.appendChild(spanPartBlock);
+    // 右クリックイベントを追加
+    liElement.addEventListener("contextmenu", (event) => contextmenuEventHandler(event, liElement));
+    ulElement.appendChild(liElement);
+    // 最終的にDIV要素にUL要素を追加
+    divElement.appendChild(ulElement);
+
+
+  }
+
+  function contextMenuAddInsert(parentElement) {
+    // div要素を作成
+    var divElement = document.createElement("div");
+    // id属性を設定
+    divElement.id = "menu-item-insert";
+    // class属性を設定
+    divElement.className = "context-menu-item";
+    // テキストコンテンツを追加
+    divElement.textContent = "挿入";
+    // 挿入メニューアイテムのクリック時の処理
+    divElement.addEventListener("click", onClickMenuInsert);
+    // 親要素に子要素としてdiv要素を追加
+    parentElement.appendChild(divElement);
+  }
+
+  function contextMenuAddChildrenInsert(parentElement) {
+    // 子の挿入メニューアイテムのクリック時の処理
+    // div要素を作成
+    var divElement = document.createElement("div");
+    // id属性を設定
+    divElement.id = "menu-item-children-insert";
+    // class属性を設定
+    divElement.className = "context-menu-item";
+    // テキストコンテンツを追加
+    divElement.textContent = "子の挿入";
+    // 挿入メニューアイテムのクリック時の処理
+    divElement.addEventListener("click", onClickMenuChildrenInsert);
+    // 親要素に子要素としてdiv要素を追加
+    parentElement.appendChild(divElement);
+  }
+
+  function contextMenuAddUpdate(parentElement) {
+    // div要素を作成
+    var divElement = document.createElement("div");
+    // id属性を設定
+    divElement.id = "menu-item-update";
+    // class属性を設定
+    divElement.className = "context-menu-item";
+    // テキストコンテンツを追加
+    divElement.textContent = "変更";
+    // 挿入メニューアイテムのクリック時の処理
+    divElement.addEventListener("click", onClickMenuUpdate);
+    // 親要素に子要素としてdiv要素を追加
+    parentElement.appendChild(divElement);
+  }
+  function contextMenuAddDelete(parentElement) {
+    // 削除メニューアイテムのクリック時の処理
+    // div要素を作成
+    var divElement = document.createElement("div");
+    // id属性を設定
+    divElement.id = "menu-item-delete";
+    // class属性を設定
+    divElement.className = "context-menu-item";
+    // テキストコンテンツを追加
+    divElement.textContent = "削除";
+    // 削除メニューアイテムのクリック時の処理
+    divElement.addEventListener("click", onClickMenuDelete);
+    // 親要素に子要素としてdiv要素を追加
+    parentElement.appendChild(divElement);
+  }
+
+
+</script>
+{% endblock %}

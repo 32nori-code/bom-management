@@ -1,0 +1,42 @@
+# Django stuff
+*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+#IDEs
+.idea/
+.vscode/
+*.code-workspace
+
+# Compiled Python files
+*.pyc
+
+# Compiled C extensions
+*.so
+
+# Compiled Objective-C files
+*.o
+
+# Caches and Logs
+*.cache
+*.log
+
+# mypy
+.mypy_cache/
+.dmypy.json
+
+# pytest
+.pytest_cache/
+.coverage

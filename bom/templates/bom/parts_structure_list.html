@@ -1,0 +1,185 @@
+{% extends "bom/base.html" %}
+{% block extra_css %}
+<style>
+  .table tbody tr {
+    user-select: none;
+    /* テキストの選択を無効にする */
+  }
+  /* メニューのスタイル */
+  .context-menu {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+    padding: 5px 0;
+    z-index: 9999;
+  }
+
+  .context-menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .context-menu-item:hover {
+    background-color: #f0f0f0;
+  }
+</style>
+{% endblock %}
+
+{% block title %}構成一覧{% endblock title %}
+
+{% block content %}
+<h4 class="mt-4 border-bottom">構成一覧</h4>
+{% comment %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <input type="text" class="form-control me-2" id="searchInput" placeholder="コードまたは名前で検索" style="flex: 1;">
+  <a href="{% url 'bom:parts_structure_add' %}" class="btn btn-primary btn-sm">追加</a>
+</div>
+{% endcomment %}
+
+<form method="get" action="{% url 'bom:product_search' %}">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <input type="text" name="query" class="form-control me-2" id="searchInput" placeholder="コードまたは名前で検索"
+      value="{{ query }}" style="flex: 1;" autofocus>
+    <input type="submit" style="display: none;"> <!-- 非表示のsubmitボタン -->
+    <a href="{% url 'bom:parts_structure_add' %}" class="btn btn-primary btn-sm">追加</a>
+  </div>
+</form>
+
+
+<table class="table table-striped table-bordered">
+  <thead>
+    <tr>
+      <th scope="col">コード</th>
+      <th scope="col">名前</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for parts_structure in parts_structures %}
+    <tr id="{{parts_structure.id}}" onclick="selectRow(event)">
+      <td>
+        <a href="{% url 'bom:parts_structure_mod' product_id=parts_structure.id %}" class="text-decoration-none">
+          {{parts_structure.part.code }}
+        </a>
+      </td>
+      <td>
+        {{ parts_structure.part.name }}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div id="context-menu" class="context-menu" style="display: none;">
+</div>
+
+{% with app_name=request.resolver_match.app_name %}
+{% include app_name|add:'/pagination.html' %}
+{% endwith %}
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+  let lastSelectedRow;
+
+  function selectRow(event) {
+    const row = event.currentTarget;
+    const rows = Array.from(document.querySelectorAll('.table tbody tr'));
+
+    if (event.shiftKey && lastSelectedRow) {
+      const startIdx = rows.indexOf(lastSelectedRow);
+      const endIdx = rows.indexOf(row);
+      rows.slice(Math.min(startIdx, endIdx), Math.max(startIdx, endIdx) + 1).forEach(r => {
+        r.classList.add('selected');
+        r.classList.add('table-primary');
+      });
+    } else if (event.ctrlKey || event.metaKey) {
+      row.classList.toggle('selected');
+      row.classList.toggle('table-primary');
+      lastSelectedRow = row;
+    } else {
+      rows.forEach(r => {
+        r.classList.remove('selected');
+        r.classList.remove('table-primary');
+      });
+      row.classList.add('selected');
+      row.classList.add('table-primary');
+      lastSelectedRow = row;
+    }
+  }
+  // function sendSelectedRows() {
+  //   const selectedRows = document.querySelectorAll('.table tbody tr.selected');
+  //   const selectedIds = Array.from(selectedRows).map(row => row.id).join(',');
+  //   console.log("selectedIds:" + selectedIds);
+
+  //   // window.location.href = `/your-server-endpoint?selectedIds=${selectedIds}`;
+  // }
+
+  var trElements = document.querySelectorAll('.table tbody tr');
+  if (trElements) {
+    // 右クリックメニューを表示するイベントリスナーを追加
+    trElements.forEach(function (trElement) {
+      trElement.addEventListener("contextmenu", (event) => contextmenuEventHandler(event, trElement));
+    });
+  }
+
+  // 右クリックイベントハンドラ
+  function contextmenuEventHandler(event, liElement) {
+    event.stopPropagation(); // イベントのバブリングを停止
+    event.preventDefault(); // デフォルトの右クリックメニューを無効にする
+
+    var menu = document.getElementById("context-menu");
+    menu.style.left = event.clientX + "px";
+    menu.style.top = event.clientY + "px";
+    menu.style.display = "block";
+    // div要素を追加したい親要素を取得
+    var parentElement = document.getElementById("context-menu");
+    // すべての子要素を一旦削除
+    parentElement.innerHTML = '';
+    // "block-part-list"クラスが設定されている場合の処理
+    // つまり、製品以外（部品）の処理。
+    contextMenuAddDelete(parentElement);
+  }
+
+  function contextMenuAddDelete(parentElement) {
+    // 削除メニューアイテムのクリック時の処理
+    // div要素を作成
+    var divElement = document.createElement("div");
+    // id属性を設定
+    divElement.id = "menu-item-delete";
+    // class属性を設定
+    divElement.className = "context-menu-item";
+    // テキストコンテンツを追加
+    divElement.textContent = "削除";
+    // 削除メニューアイテムのクリック時の処理
+    divElement.addEventListener("click", onClickMenuDelete);
+    // 親要素に子要素としてdiv要素を追加
+    parentElement.appendChild(divElement);
+  }
+
+  // 右クリックメニューの「削除」項目クリック
+  function onClickMenuDelete() {
+    const selectedRows = document.querySelectorAll('.table tbody tr.selected');
+    const selectedIds = Array.from(selectedRows).map(row => row.id).join(',');
+    console.log("selectedIds:" + selectedIds);
+
+    // window.location.href = `/your-server-endpoint?selectedIds=${selectedIds}`;
+    window.location.href = `{% url 'bom:product_del' %}?selectedIds=${selectedIds}`;
+  }
+
+  // クリックイベントリスナーを追加
+  function clickEventHandler(event) {
+    var menu = document.getElementById("context-menu");
+    menu.style.display = "none"; // メニューを非表示にする
+    // 右クリックにて表示されたメニュー以外のクリック
+    if (!menu.contains(event.target)) {
+      // 選択した行の背景をクリア
+      // selectLineBgClear();
+    }
+  }
+  document.addEventListener("click", clickEventHandler);
+
+</script>
+{% endblock %}

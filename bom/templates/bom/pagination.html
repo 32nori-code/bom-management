@@ -1,0 +1,32 @@
+{% if page_obj.has_other_pages %}
+<nav aria-label="Page navigation example">
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+            <li><a class="page-link text-primary d-inline-block" href="?page={{ page_obj.previous_page_number }}"><<</a></li>
+        {% else %}
+            <li class="disabled"><div class="page-link text-secondary d-inline-block disabled" href="#"><<</div></li>
+        {% endif %}
+
+        {% if page_obj.has_previous %}
+            {% if page_obj.previous_page_number != 1 %}
+                <li><a class="page-link text-primary d-inline-block" href="?page=1">1</a></li>
+                <li>…</li>
+            {% endif %}
+            <li><a class="page-link text-primary d-inline-block" href="?page={{ page_obj.previous_page_number }}">{{ page_obj.previous_page_number }}</a></li>
+        {% endif %}
+        <li class="disabled"><div class="page-link text-secondary d-inline-block disabled" href="#">{{ page_obj.number }}</div></li>
+        {% if page_obj.has_next %}
+            <li><a class="page-link text-primary d-inline-block" href="?page={{ page_obj.next_page_number }}">{{ page_obj.next_page_number }}</a></li>
+            {% if page_obj.next_page_number != page_obj.paginator.num_pages %}
+                <li>…</li>
+                <li><a class="page-link text-primary d-inline-block" href="?page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a></li>
+            {% endif %}
+        {% endif %}
+        {% if page_obj.has_next %}
+            <li><a class="page-link text-primary d-inline-block" href="?page={{ page_obj.next_page_number }}">>></a></li>
+        {% else %}
+            <li class="disabled"><div class="page-link text-secondary d-inline-block disabled" href="#">>></div></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}

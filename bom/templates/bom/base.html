@@ -1,0 +1,26 @@
+{% load django_bootstrap5 %}
+{% load i18n static %}
+<!DOCTYPE html>{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE|default:" en-us" }}">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  {% bootstrap_css %}
+  {% bootstrap_javascript %}
+  {% block extra_css %}{% endblock %}
+  <title>{% block title %}products{% endblock %}</title>
+</head>
+
+<body>
+  <div class="page-header">
+  </div>
+  <div class="container">
+    {% block content %}
+    {{ content }}
+    {% endblock %}
+  </div>
+  {% block extra_js %}{% endblock %}
+</body>
+
+</html>

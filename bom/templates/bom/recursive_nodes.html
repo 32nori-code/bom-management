@@ -1,0 +1,31 @@
+<!-- recursive_nodes.html -->
+
+{% load bom.custom_tags %}
+{% load static %}
+
+<ul class="nested">
+  {% for node in nodes %}
+    {% if node.children %}
+      <li id="{{node.id}}" class="block-part-list" draggable="true">
+        <span class="part-up">
+          <span class="more-or-less"><img class="expand_more active"
+            src="{% static 'icons/expand_more_black_24dp.svg' %}" alt="もっと見る" title="もっと見る"></span><span class="code">{{node.code}}</span>
+          _{{ node.name }}:
+          <span class="quantity">{{ node.quantity }}</span>
+          ,<span class="usedquantity">{{ node.usedquantity }}</span>
+        </span>
+      {% recursetree node.children %}
+      </li>
+    {% else %}
+    <li id="{{node.id}}" class="block-part-list" draggable="true">
+      <span class="part-block">
+        <span class="more-or-less-dummy"></span><span class="code">{{node.code}}</span>
+        _{{ node.name }}:
+        <span class="quantity">{{ node.quantity }}</span>
+        ,<span class="usedquantity">{{ node.usedquantity }}</span>
+      </span>
+    </li>
+    {% endif %}
+  {% endfor %}
+</ul>
+ 

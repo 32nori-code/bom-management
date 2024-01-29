@@ -1,0 +1,66 @@
+[
+    {
+        "model" : "bom.part",
+        "pk" : 1,
+        "fields" : {
+            "code" : "pra",
+            "name" : "プロダクトa"
+        }
+    },
+    {
+        "model" : "bom.part",
+        "pk" : 2,
+        "fields" : {
+            "code" : "aa",
+            "name" : "アセンブリa"
+        }
+    },
+    {
+        "model" : "bom.part",
+        "pk" : 3,
+        "fields" : {
+            "code" : "ab",
+            "name" : "アセンブリb"
+        }
+    },
+    {
+        "model" : "bom.part",
+        "pk" : 4,
+        "fields" : {
+            "code" : "ac",
+            "name" : "アセンブリc"
+        }
+    },
+    {
+        "model" : "bom.part",
+        "pk" : 5,
+        "fields" : {
+            "code" : "pa",
+            "name" : "パーツa"
+        }
+    },
+    {
+        "model" : "bom.part",
+        "pk" : 6,
+        "fields" : {
+            "code" : "pb",
+            "name" : "パーツb"
+        }
+    },
+    {
+        "model" : "bom.part",
+        "pk" : 7,
+        "fields" : {
+            "code" : "pc",
+            "name" : "パーツc"
+        }
+    },
+    {
+        "model" : "bom.part",
+        "pk" : 8,
+        "fields" : {
+            "code" : "prb",
+            "name" : "プロダクトb"
+        }
+    }
+]
