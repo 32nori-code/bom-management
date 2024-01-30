@@ -11,8 +11,8 @@
 ## 1.リポジトリのクローン
 GitHubからプロジェクトをクローンします。
 ```powershell
-git clone https://github.com/32nori-code/bom-management.git
-cd part_list_project
+git clone https://github.com/32nori-code/bom-management.git bom_management
+cd bom_management
 ```
 
 ## 2.依存関係のインストール
