@@ -1,0 +1,14 @@
+from django.shortcuts import render
+
+# Create your views here.
+from django.http import HttpResponse
+
+import sys
+
+def index(request):
+
+     versions = sys.version_info
+
+     output = str(versions).encode('utf-8')
+
+     return HttpResponse(output)

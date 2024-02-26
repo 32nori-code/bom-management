@@ -20,4 +20,6 @@ from django.urls import path, include   # ←, includeを追加
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('bom/', include('bom.urls')),   # ←ここを追加
+#    path('', include('bom.urls')),   # ←ここを追加
+
 ]

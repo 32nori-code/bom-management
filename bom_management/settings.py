@@ -132,22 +132,39 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
-# settings.py
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'django_debug.log'),
+            # 'level': 'DEBUG',   # 開発環境時の設定
+            'level': 'INFO',  # 本番環境時の設定
+            'class': 'logging.handlers.RotatingFileHandler',
+            # 'filename': 'django_logs.log',
+            'filename': os.path.join(BASE_DIR, 'logs', 'django_logs.log'),
+            'maxBytes': 1024*1024*5, # 5MB
+            'backupCount': 5, # 最大5ファイルまでバックアップ
+            'formatter': 'verbose',
+        },
+        'console': {
+            # 'level': 'DEBUG',   # 開発環境時の設定
+            'level': 'INFO',  # 本番環境時の設定
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
+            'handlers': ['file', 'console'],
+            # 'level': 'DEBUG',   # 開発環境時の設定
+            'level': 'INFO',  # 本番環境時の設定
             'propagate': True,
         },
     },
