@@ -562,12 +562,20 @@
 
   // 「戻る」ボタンイベント登録
   var backBtn = document.getElementById('back-btn');
-  function onCliCkBackBtn() {
-    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
-    var requestUrl = `/${app_name}/parts-structure/`;
+  // function onCliCkBackBtn() {
+  //   var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+  //   var requestUrl = `/${app_name}/parts-structure/`;
+  //   window.location.href = requestUrl;
+  // }
+  // backBtn.addEventListener("click", onCliCkBackBtn);
+  function onClickBackBtn() {
+    // 現在のURLからベースパスを取得（例: '/project1'）
+    var basePath = window.location.pathname.split('/')[1];
+    // 新しいURLを構築
+    var requestUrl = `/${basePath}/parts-structure/`;
     window.location.href = requestUrl;
   }
-  backBtn.addEventListener("click", onCliCkBackBtn);
+  backBtn.addEventListener("click", onClickBackBtn);
 
 
   // 選択した行の背景をクリア
