@@ -569,11 +569,7 @@
   // }
   // backBtn.addEventListener("click", onCliCkBackBtn);
   function onClickBackBtn() {
-    // 現在のURLからベースパスを取得（例: '/project1'）
-    var basePath = window.location.pathname.split('/')[1];
-    // 新しいURLを構築
-    var requestUrl = `/${basePath}/parts-structure/`;
-    window.location.href = requestUrl;
+    window.location.href = "{% url 'bom:product_list' %}";
   }
   backBtn.addEventListener("click", onClickBackBtn);
 
