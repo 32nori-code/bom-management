@@ -282,9 +282,12 @@
     var title = "{{ title }}";
     if (title == "構成を変更") {
       requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/undo/`;
+      {# requestUrl = "{% url 'bom:parts_structure_mod_undo' product_id=product_id %}"; #}
+
     } else {
       var productId = document.querySelector('#part-list li').id;
       requestUrl = `/${app_name}/parts-structure/add/` + productId + `/undo/`;
+      {# requestUrl = "{% url 'bom:parts_structure_add_undo' product_id=product_id %}"; #}
     }
     window.location.href = requestUrl;
   }
