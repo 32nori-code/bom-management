@@ -157,11 +157,11 @@
 {% endblock %}
 
 {% block title %}
-{{title}}
+{{ request.session.title }}
 {% endblock title %}
 
 {% block content %}
-<h4 class="mt-4 mb-5 border-bottom">{{title}}</h4>
+<h4 class="mt-4 mb-5 border-bottom">{{ request.session.title }}</h4>
 <div id="message-container"></div>
 <form id="editForm"
   action="{% if product_id %}{% url 'bom:parts_structure_mod' product_id=product_id %}{% else %}{% url 'bom:parts_structure_add' %}{% endif %}"
@@ -257,7 +257,7 @@
     imgUndoIconElement.removeEventListener('click', onCliCkUndoIcon);
   }
 
-  var title = '{{title}}';
+  var title = '{{ request.session.title }}';
   if (title === '構成を追加') {
     productEditBlock();
   }
@@ -277,17 +277,13 @@
 
   function onCliCkUndoIcon() {
     // リクエストを送信
-    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
-    var title = "{{ title }}";
+    var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
-      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/undo/`;
-      {# requestUrl = "{% url 'bom:parts_structure_mod_undo' product_id=product_id %}"; #}
-
+      requestUrl = "{% url 'bom:parts_structure_mod_base' %}" + "{{ product_id }}" + "/undo/";
     } else {
       var productId = document.querySelector('#part-list li').id;
-      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/undo/`;
-      {# requestUrl = "{% url 'bom:parts_structure_add_undo' product_id=product_id %}"; #}
+      requestUrl = "{% url 'bom:parts_structure_add_base' %}" + productId + "/undo/";
     }
     window.location.href = requestUrl;
   }
@@ -303,7 +299,7 @@
     // リクエストを送信
     var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
-    var title = "{{ title }}";
+    var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
       requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/redo/`;
     } else {
@@ -438,7 +434,7 @@
     // Ajaxリクエストを送信
     var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
-    var title = "{{ title }}";
+    var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
       requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/drop/?drop_target_id=${this.id}&insert_position=${insertPosition}&dragged_id=${draggedId}`;
     } else {
@@ -701,7 +697,7 @@
     // Ajaxリクエストを送信
     var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
-    var title = "{{ title }}";
+    var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
       requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/del/?current_parts_structure_id=${currentCompositionId}`;
     } else {
@@ -1062,7 +1058,7 @@
     var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
     var executeProcess;
-    var title = "{{ title }}";
+    var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
       // 部品の処理 
       requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/add/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
@@ -1098,7 +1094,8 @@
           existingLiElement.parentNode.insertBefore(newLiElement, existingLiElement);
         } else {
           // 製品の要素作成
-          createProductElement(data.new_id, data.name);
+          // createProductElement(data.new_id, data.name);
+          createProductElement(data.product_id, data.name);
         }
 
         // undo,redoの状態をセット
@@ -1174,7 +1171,7 @@
     // Ajaxリクエストを送信
     var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
-    var title = "{{ title }}";
+    var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
       // 変更の処理 
       var requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/addChildren/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
@@ -1256,7 +1253,7 @@
     // Ajaxリクエストを送信
     var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
-    var title = "{{ title }}";
+    var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
       requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/mod/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.textContent}&edit_block_quantity=${editBlockQuantity.value}`;
     } else {

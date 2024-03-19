@@ -6,7 +6,7 @@ from bom.models import PartsStructure, Part, PartsStructureChangeSet, PartsStruc
 from django.http import JsonResponse
 from django.db.models import Max
 from django.db import transaction
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.urls import reverse
 
 
@@ -40,19 +40,33 @@ class ProductList(ListView):
         return context
 
 
+def parts_structure_add_base(request):
+    return HttpResponse("Here is the response content.")
+
+
+def parts_structure_mod_base(request):
+    return HttpResponse("Here is the response content.")
+
+
 def parts_structure_edit(request, product_id=None):
     if product_id is None:
         nodes = None
-        title = '構成を追加'
+        # title = '構成を追加'
+        request.session['title'] = '構成を追加'
     else:
         # 実行
         nodes = find_by_product_id(product_id)
-        title = '構成を変更'
+        # title = '構成を変更'
+        request.session['title'] = '構成を追加'
 
     undo_status, redo_status = check_undo_redo(product_id)
+    # return render(request,
+    #               'bom/parts_structure_edit.html',   # 使用するテンプレート
+    #               {'product_id': product_id, 'nodes': nodes, 'undo': undo_status, 'redo': redo_status, 'title': title}
+    #               )
     return render(request,
                   'bom/parts_structure_edit.html',   # 使用するテンプレート
-                  {'product_id': product_id, 'nodes': nodes, 'undo': undo_status, 'redo': redo_status, 'title': title}
+                  {'product_id': product_id, 'nodes': nodes, 'undo': undo_status, 'redo': redo_status}
                   )
 
 
@@ -237,7 +251,7 @@ def parts_structure_add_product(request):
         return JsonResponse({"success": False, "message": str(e)})
     undo_status, redo_status = check_undo_redo(new_parts_structure_instance.id)
     return JsonResponse({"success": True,
-                         "new_id": new_parts_structure_instance.id,
+                         "product_id": new_parts_structure_instance.id,
                          "name": part_instance.name, 'undo': undo_status,
                          "redo": redo_status})
 
@@ -609,7 +623,7 @@ def change_sorts(drop_target_parts_structure, insert_position, dragged_id):
     return change_parts_structures
 
 
-# 変更画面の「元に戻す」ボタン処理
+# 追加、変更画面の「元に戻す」ボタン処理
 def parts_structure_edit_undo(request, product_id):
     # 実行
     with transaction.atomic():
@@ -641,16 +655,25 @@ def parts_structure_edit_undo(request, product_id):
                         quantity=parts_structure_history.quantity,
                     )
             # 現状のポインタを１つ前のポインタへ戻す。
-            parts_structure = PartsStructure.objects.get(pk=product_id)
-            parts_structure_change_set = PartsStructureChangeSet.objects.filter(
-                product=parts_structure, pk__lt=undo_redo_pointer.pointer.id
-            ).order_by('-pk').first()
-            # parts_structure_change_setが取れなければundo_redo_pointerを削除。
-            if parts_structure_change_set is None:
-                undo_redo_pointer.delete()
-            else:
-                undo_redo_pointer.pointer = parts_structure_change_set
-                undo_redo_pointer.save()
+            # parts_structure = PartsStructure.objects.get(pk=product_id)
+            # の処理にて製品１件だけの場合、レコードが上の処理にて消され取れない。
+            # その場合はPartsStructureChangeSetもundo_redo_pointerも消えている。
+            try:
+                parts_structure = PartsStructure.objects.get(pk=product_id)
+                parts_structure_change_set = PartsStructureChangeSet.objects.filter(
+                    product=parts_structure, pk__lt=undo_redo_pointer.pointer.id
+                ).order_by('-pk').first()
+                # parts_structure_change_setが取れなければundo_redo_pointerを削除。
+                if parts_structure_change_set is None:
+                    undo_redo_pointer.delete()
+                else:
+                    undo_redo_pointer.pointer = parts_structure_change_set
+                    undo_redo_pointer.save()
+            except PartsStructure.DoesNotExist:
+                return render(request,
+                            'bom/parts_structure_edit.html',   # 使用するテンプレート
+                            {'product_id': product_id, 'nodes': [], 'undo': False, 'redo': False}
+                            )
         except UndoRedoPointer.DoesNotExist:
             pass
         # 再描画の為のデータを取り出す。
