@@ -40,11 +40,7 @@ class ProductList(ListView):
         return context
 
 
-def parts_structure_add_base(request):
-    return HttpResponse("Here is the response content.")
-
-
-def parts_structure_mod_base(request):
+def parts_structure_base(request):
     return HttpResponse("Here is the response content.")
 
 

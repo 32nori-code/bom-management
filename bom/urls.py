@@ -30,8 +30,6 @@ urlpatterns = [
          name='parts_structure_add_undo'),  # 元に戻す
     path('parts-structure/add/<int:product_id>/redo/', views.parts_structure_edit_redo,
          name='parts_structure_add_redo'),  # やり直し
-    path('parts-structure/add/', views.parts_structure_add_base,
-         name='parts_structure_add_base'),  # 追加のbase一番したに書くこと
 
     # 構成を変更画面
     path('parts-structure/mod/<int:product_id>/', views.parts_structure_edit,
@@ -51,7 +49,4 @@ urlpatterns = [
          name='parts_structure_mod_undo'),  # 元に戻す
     path('parts-structure/mod/<int:product_id>/redo/', views.parts_structure_edit_redo,
          name='parts_structure_mod_redo'),  # やり直し
-    path('parts-structure/mod/', views.parts_structure_mod_base,
-         name='parts_structure_mod_base'),  # 変更のbase一番したに書くこと
-
 ]
