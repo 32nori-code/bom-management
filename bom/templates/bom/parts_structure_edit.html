@@ -280,10 +280,10 @@
     var requestUrl;
     var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
-      requestUrl = "{% url 'bom:parts_structure_mod_base' %}" + "{{ product_id }}" + "/undo/";
+      requestUrl = "{% url 'bom:product_list' %}" + "mod/" + "{{ product_id }}" + "/undo/";
     } else {
       var productId = document.querySelector('#part-list li').id;
-      requestUrl = "{% url 'bom:parts_structure_add_base' %}" + productId + "/undo/";
+      requestUrl = "{% url 'bom:product_list' %}" + "add/" + productId + "/undo/";
     }
     window.location.href = requestUrl;
   }
@@ -297,14 +297,16 @@
   }
   function onCliCkRedoIcon() {
     // リクエストを送信
-    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    // var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
     var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
-      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/redo/`;
+      // requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/redo/`;
+      requestUrl = `{% url 'bom:product_list' %}mod/{{ product_id }}/redo/`;
     } else {
       var productId = document.querySelector('#part-list li').id;
-      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/redo/`;
+      // requestUrl = `/${app_name}/parts-structure/add/` + productId + `/redo/`;
+      requestUrl = `{% url 'bom:product_list' %}add/` + productId + `/redo/`;
     }
     window.location.href = requestUrl;
   }
@@ -432,14 +434,16 @@
 
     console.log("draggedId:" + draggedId);
     // Ajaxリクエストを送信
-    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    // var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
     var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
-      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/drop/?drop_target_id=${this.id}&insert_position=${insertPosition}&dragged_id=${draggedId}`;
+      // requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/drop/?drop_target_id=${this.id}&insert_position=${insertPosition}&dragged_id=${draggedId}`;
+      requestUrl = `{% url 'bom:product_list' %}mod/{{ product_id }}/drop/?drop_target_id=${this.id}&insert_position=${insertPosition}&dragged_id=${draggedId}`;
     } else {
       var productId = document.querySelector('#part-list li').id;
-      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/drop/?drop_target_id=${this.id}&insert_position=${insertPosition}&dragged_id=${draggedId}`;
+      // requestUrl = `/${app_name}/parts-structure/add/` + productId + `/drop/?drop_target_id=${this.id}&insert_position=${insertPosition}&dragged_id=${draggedId}`;
+      requestUrl = `{% url 'bom:product_list' %}add/` + productId + `/drop/?drop_target_id=${this.id}&insert_position=${insertPosition}&dragged_id=${draggedId}`;
     }
     var xhr = new XMLHttpRequest();
     xhr.open("GET", requestUrl, false);
@@ -695,14 +699,16 @@
 
 
     // Ajaxリクエストを送信
-    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    // var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
     var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
-      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/del/?current_parts_structure_id=${currentCompositionId}`;
+      // requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/del/?current_parts_structure_id=${currentCompositionId}`;
+      requestUrl = `{% url 'bom:product_list' %}mod/{{ product_id }}/del/?current_parts_structure_id=${currentCompositionId}`;
     } else {
       var productId = document.querySelector('#part-list li').id;
-      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/del/?current_parts_structure_id=${currentCompositionId}`;
+      // requestUrl = `/${app_name}/parts-structure/add/` + productId + `/del/?current_parts_structure_id=${currentCompositionId}`;
+      requestUrl = `{% url 'bom:product_list' %}add/` + productId + `/del/?current_parts_structure_id=${currentCompositionId}`;
     }
     var xhr = new XMLHttpRequest();
     xhr.open("GET", requestUrl, false); // false を指定して同期リクエストにする
@@ -713,8 +719,9 @@
         var productId = document.querySelector('#part-list li').id;
         // 製品の削除処理実行の場合、一覧画面へ戻す。
         if(currentCompositionId == productId){
-          var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
-          var requestUrl = `/${app_name}/parts-structure/`;
+          // var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+          // var requestUrl = `/${app_name}/parts-structure/`;
+          var requestUrl = "{% url 'bom:product_list' %}";
           window.location.href = requestUrl;
         }
 
@@ -1055,22 +1062,25 @@
     editBlockCode = document.getElementById("edit-block-code");
     var editBlockQuantity = document.getElementById("edit-block-quantity");
     // Ajaxリクエストを送信
-    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    // var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
     var executeProcess;
     var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
       // 部品の処理 
-      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/add/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+      // requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/add/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+      requestUrl = `{% url 'bom:product_list' %}mod/{{ product_id }}/add/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
     }
     if (title == "構成を追加") {
       if (document.getElementById("part-list")) {
         // 部品の処理
         var productId = document.querySelector('#part-list li').id;
-        requestUrl = `/${app_name}/parts-structure/add/` + productId + `/add/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+        // requestUrl = `/${app_name}/parts-structure/add/` + productId + `/add/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+        requestUrl = `{% url 'bom:product_list' %}add/` + productId + `/add/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
       } else {
         // 製品の処理
-        requestUrl = `/${app_name}/parts-structure/add/product/?edit_block_code=${editBlockCode.value}`;
+        // requestUrl = `/${app_name}/parts-structure/add/product/?edit_block_code=${editBlockCode.value}`;
+        requestUrl = `{% url 'bom:product_list' %}add/product/?edit_block_code=${editBlockCode.value}`;
         executeProcess = 'add-product';
       }
     }
@@ -1169,17 +1179,19 @@
     editBlockCode = document.getElementById("edit-block-code");
     var editBlockQuantity = document.getElementById("edit-block-quantity");
     // Ajaxリクエストを送信
-    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    // var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
     var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
       // 変更の処理 
-      var requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/addChildren/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+      // var requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/addChildren/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+      var requestUrl = `{% url 'bom:product_list' %}mod/{{ product_id }}/addChildren/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
     } else {
       // 追加の処理
       // 'part-list' IDを持つulタグの最初の子要素（liタグ）のIDを取得する
       var productId = document.querySelector('#part-list li').id;
-      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/addChildren/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+      // requestUrl = `/${app_name}/parts-structure/add/` + productId + `/addChildren/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
+      requestUrl = `{% url 'bom:product_list' %}add/` + productId + `/addChildren/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.value}&edit_block_quantity=${editBlockQuantity.value}`;
     }
 
     var xhr = new XMLHttpRequest();
@@ -1251,16 +1263,18 @@
     var parentUsedquantityElement = parentLiElement.querySelector(".usedquantity");
     var editBlockQuantity = document.getElementById("edit-block-quantity");
     // Ajaxリクエストを送信
-    var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
+    // var app_name = "{{ request.resolver_match.app_name }}";  // アプリケーション名を取得
     var requestUrl;
     var title = "{{ request.session.title }}";
     if (title == "構成を変更") {
-      requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/mod/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.textContent}&edit_block_quantity=${editBlockQuantity.value}`;
+      // requestUrl = `/${app_name}/parts-structure/mod/{{ product_id }}/mod/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.textContent}&edit_block_quantity=${editBlockQuantity.value}`;
+      requestUrl = `{% url 'bom:product_list' %}mod/{{ product_id }}/mod/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.textContent}&edit_block_quantity=${editBlockQuantity.value}`;
     } else {
       // 追加の処理
       // 'part-list' IDを持つulタグの最初の子要素（liタグ）のIDを取得する
       var productId = document.querySelector('#part-list li').id;
-      requestUrl = `/${app_name}/parts-structure/add/` + productId + `/mod/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.textContent}&edit_block_quantity=${editBlockQuantity.value}`;
+      // requestUrl = `/${app_name}/parts-structure/add/` + productId + `/mod/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.textContent}&edit_block_quantity=${editBlockQuantity.value}`;
+      requestUrl = `{% url 'bom:product_list' %}add/` + productId + `/mod/?current_parts_structure_id=${currentCompositionId}&edit_block_code=${editBlockCode.textContent}&edit_block_quantity=${editBlockQuantity.value}`;
     }
     var xhr = new XMLHttpRequest();
     xhr.open("GET", requestUrl, false); // false を指定して同期リクエストにする
