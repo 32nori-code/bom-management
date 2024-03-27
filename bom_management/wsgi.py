@@ -11,6 +11,8 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bom_management.settings')
+# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bom_management.settings')
+# 本番環境用のDjango設定を指定
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bom_management.settings.production')
 
 application = get_wsgi_application()
